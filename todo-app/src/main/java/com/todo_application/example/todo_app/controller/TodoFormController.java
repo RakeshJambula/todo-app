@@ -4,68 +4,52 @@ import com.todo_application.example.todo_app.models.TodoItem;
 import com.todo_application.example.todo_app.services.TodoItemService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-@Controller
+import java.util.List;
+
+@RestController
+@RequestMapping("/api")
 public class TodoFormController {
 
     @Autowired
     private TodoItemService todoItemService;
 
-    @GetMapping("/create-todo")
-    public String showCreateForm(TodoItem todoItem) {
-        return "new-todo-item";
+    @GetMapping("/todo")
+    public List<TodoItem> getAllTodos() {
+        return todoItemService.findAll();
     }
 
-    @PostMapping("/todo")
-    public String createTodoItem(@Valid TodoItem todoItem, BindingResult result, Model model) {
-
-        TodoItem item = new TodoItem();
-        item.setDescription(todoItem.getDescription());
-        item.setIsComplete(todoItem.getIsComplete());
-
-        todoItemService.save(todoItem);
-        return "redirect:/";
+    @GetMapping("/{id}")
+    public ResponseEntity<TodoItem> getTodoById(@PathVariable Long id) {
+        return todoItemService.findById(id)
+                .map(todoItem -> ResponseEntity.ok().body(todoItem))
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/delete/{id}")
-    public String deleteTodoItem(@PathVariable("id") Long id, Model model) {
-        TodoItem todoItem = todoItemService
-                .getById(id)
-                .orElseThrow(() -> new IllegalArgumentException("TodoItem id: " + id + " not found"));
-
-        todoItemService.delete(todoItem);
-        return "redirect:/";
+    @PostMapping("/create-todo")
+    public TodoItem createTodoItem(@Valid @RequestBody TodoItem todoItem) {
+        return todoItemService.save(todoItem);
     }
 
-    @GetMapping("/edit/{id}")
-    public String showUpdateForm(@PathVariable("id") Long id, Model model) {
-        TodoItem todoItem = todoItemService
-                .getById(id)
-                .orElseThrow(() -> new IllegalArgumentException("TodoItem id: " + id + " not found"));
-
-        model.addAttribute("todo", todoItem);
-        return "edit-todo-item";
+    @PutMapping("/{id}")
+    public ResponseEntity<TodoItem> updateTodoItem(@PathVariable Long id, @Valid @RequestBody TodoItem todoItemDetails) {
+        return todoItemService.findById(id)
+                .map(todoItem -> {
+                    todoItem.setDescription(todoItemDetails.getDescription());
+                    todoItem.setIsComplete(todoItemDetails.getIsComplete());
+                    return ResponseEntity.ok(todoItemService.save(todoItem));
+                }).orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/todo/{id}")
-    public String updateTodoItem(@PathVariable("id") Long id, @Valid TodoItem todoItem, BindingResult result, Model model) {
-
-        TodoItem item = todoItemService
-                .getById(id)
-                .orElseThrow(() -> new IllegalArgumentException("TodoItem id: " + id + " not found"));
-
-        item.setIsComplete(todoItem.getIsComplete());
-        item.setDescription(todoItem.getDescription());
-
-        todoItemService.save(item);
-
-        return "redirect:/";
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Object> deleteTodoItem(@PathVariable Long id) {
+        return todoItemService.findById(id)
+                .map(todoItem -> {
+                    todoItemService.deleteById(id);
+                    return ResponseEntity.ok().build();
+                }).orElse(ResponseEntity.notFound().build());
     }
 }
 

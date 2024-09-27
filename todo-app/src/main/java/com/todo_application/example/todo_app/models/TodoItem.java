@@ -15,7 +15,7 @@ import java.time.Instant;
 public class TodoItem implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank(message = "Description is required")
@@ -27,12 +27,22 @@ public class TodoItem implements Serializable {
 
     private Instant updatedAt;
 
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
+
     @Override
     public String toString() {
         return String.format("TodoItem{id=%d, description='%s', isComplete='%s', createdAt='%s', updatedAt='%s'}",
                 id, description, isComplete, createdAt, updatedAt);
     }
-
 }
+
 
 
